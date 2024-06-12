@@ -4,6 +4,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.11.2",
+    "@prisma/client": "^5.15.0",
     "hono": "^4.4.4"
   },
   "devDependencies": {
