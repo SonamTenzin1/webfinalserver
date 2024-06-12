@@ -14,14 +14,10 @@ datasource db {
 }
 
 model User {
-  username    String  @id @default(auto()) @map("_id") @db.ObjectId
-  email String  @unique
-  name  String?
-}
-
-model profile {
-  username String @id @default(auto()) @map("_id") @db.ObjectId
-  name     String
-  following Int
-  followers Int
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  name          String?
+  followers     User[]   @relation("UserFollows", fields: [followedByIDs], references: [id])
+  followedByIDs String[] @db.ObjectId
+  following     User[]   @relation("UserFollows", fields: [followingIDs], references: [id])
+  followingIDs  String[] @db.ObjectId
 }

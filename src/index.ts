@@ -1,43 +1,56 @@
-import { serve } from '@hono/node-server'
-import { Hono } from 'hono'
-import { PrismaClient } from '@prisma/client';
+import { serve } from "@hono/node-server";
+import { Hono } from "hono";
+import { PrismaClient } from "@prisma/client";
 
-const app = new Hono()
+const app = new Hono();
 const prisma = new PrismaClient();
 
-app.get('/auth', (c) => {
-  return c.text('Hello Hono!')
-})
+app.get("/auth", (c) => {
+  return c.text("Hello Hono!");
+});
 
-app.get('/profile/:username', (c) => {
+app.get("/profile/:username", (c) => {
   const { username } = c.req.param();
-  const profile = prisma.profile.findUnique({
+  const profile = prisma.user.findUnique({
     where: {
       username,
-      following: {},
-      followers: {},
-      posts: {
-        include: {
-          likes: {
-            include: {
-              user: true
-            }
-          },
-          comments: {
-            include: {
-              user: true
-            }
-          }
-        }
-      }
-    }
+    },
   });
   return c.json(profile);
-})
-const port = 3000
-console.log(`Server is running on port ${port}`)
+});
+
+app.get("/profile/:username/followers", (c) => {
+  const { username } = c.req.param();
+  const followers = prisma.user
+    .findUnique({
+      where: {
+        username,
+      },
+    })
+    .followers();
+  return c.json(followers);
+});
+
+app.get("/profile/:username/following", (c) => {
+  const { username } = c.req.param();
+  const followers = prisma.user
+    .findUnique({
+      where: {
+        username,
+      },
+    })
+    .following();
+  return c.json(followers);
+});
+
+app.patch("profile/:username/editpf", (c) => {
+  
+});
+
+const port = 3000;
+console.log(`Server is running on port ${port}`);
 
 serve({
   fetch: app.fetch,
-  port
-})
+  port,
+});
