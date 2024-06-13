@@ -21,3 +21,10 @@ model User {
   following     User[]   @relation("UserFollows", fields: [followingIDs], references: [id])
   followingIDs  String[] @db.ObjectId
 }
+
+model Post {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt DateTime @default(now())
+  // other fields...
+  likes     Int      @default(0)
+}

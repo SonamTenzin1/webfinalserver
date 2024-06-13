@@ -8,6 +8,43 @@ const prisma = new PrismaClient();
 app.get("/auth", (c) => {
   return c.text("Hello Hono!");
 });
+// this is for latest post to be at top
+app.get("/feeds", async (c) => {
+  const feeds = await prisma.post.findMany({
+    orderBy: {
+      createdAt: 'desc'
+    }
+  });
+  return c.json(feeds);
+});
+
+// like count 
+app.post("/post/:id/like", async (c) => {
+  const { id } = c.req.param();
+  const post = await prisma.post.update({
+    where: { id: Number(id) },
+    data: {
+      likes: {
+        increment: 1
+      }
+    }
+  });
+  return c.json(post);
+});
+
+//  comment
+app.get("/post/:id/comments", async (c) => {
+  const { id } = c.req.param();
+  const comments = await prisma.comment.findMany({
+    where: {
+      postId: Number(id),
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  });
+  return c.json(comments);
+});
 
 app.get("/profile/:username", (c) => {
   const { username } = c.req.param();
@@ -44,6 +81,7 @@ app.get("/profile/:username/following", (c) => {
 });
 
 app.patch("profile/:username/editpf", (c) => {
+
   
 });
 
