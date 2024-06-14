@@ -5,46 +5,70 @@ import { PrismaClient } from "@prisma/client";
 const app = new Hono();
 const prisma = new PrismaClient();
 
+
+
 app.get("/auth", (c) => {
   return c.text("Hello Hono!");
 });
 
-app.get("/profile/:username", (c) => {
+// endpoint for profile 
+
+app.get("/profile/:username", async (c) => {
   const { username } = c.req.param();
-  const profile = prisma.user.findUnique({
+  const profile = await prisma.user.findUnique({
     where: {
       username,
     },
+    select:{
+      username: true,
+      following: true,
+      followers: true,
+      bio: true,
+      Post: true
+    },
+
   });
   return c.json(profile);
 });
 
-app.get("/profile/:username/followers", (c) => {
+// endpoint for followers on profile
+app.get("/profile/:username/followers", async (c) => {
   const { username } = c.req.param();
-  const followers = prisma.user
-    .findUnique({
+  const followers = await prisma.user.findUnique({
+    where: {
+      username,
+    },
+    select: {  
+      followers: true,  
+    },
+  })
+  return c.json(followers);
+});
+// endpoint for following on profile
+app.get("/profile/:username/following", async (c) => {
+  const { username } = c.req.param();
+  const following = await prisma.user.findUnique({
       where: {
         username,
       },
-    })
-    .followers();
-  return c.json(followers);
-});
-
-app.get("/profile/:username/following", (c) => {
-  const { username } = c.req.param();
-  const followers = prisma.user
-    .findUnique({
-      where: {
-        username,
+      select: {
+        following: true,
       },
     })
-    .following();
-  return c.json(followers);
+  return c.json(following);
 });
 
-app.patch("profile/:username/editpf", (c) => {
-  
+app.patch("profile/:username/editpf", async (c) => {
+  const { username } = c.req.param();
+  const updatedProfile = await prisma.user.update({
+    where: {
+      username,
+    },
+    data: {
+
+    },
+  });
+  return c.json(updatedProfile);
 });
 
 const port = 3000;
