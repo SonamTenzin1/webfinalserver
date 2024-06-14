@@ -14,6 +14,7 @@ datasource db {
 }
 
 model User {
+<<<<<<< HEAD
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
   username          String? @unique
   bio            String?
@@ -56,3 +57,22 @@ type Address {
   state  String
   zip    String
 }
+=======
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  name           String?
+  followers      User[]   @relation("UserFollows", fields: [followedByIDs], references: [id])
+  followedByIDs  String[] @db.ObjectId
+  following      User[]   @relation("UserFollows", fields: [followingIDs], references: [id])
+  followingIDs   String[] @db.ObjectId
+  email          String    @unique
+  hashedPassword String
+  Account        Account[]
+}
+
+model Account {
+  id      String @id @default(uuid()) @map("_id")
+  userId  String @db.ObjectId
+  user    User   @relation(fields: [userId], references: [id])
+  balance Int    @default(0)
+}
+>>>>>>> d7ca38110b36b9a2a17b0e67ded03e790ffecf63
