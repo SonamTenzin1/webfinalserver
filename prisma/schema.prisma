@@ -37,6 +37,8 @@ model Post {
   author   User      @relation(fields: [authorId], references: [id])
   authorId String    @db.ObjectId
   comments Comment[]
+  likes    Int
+  createdAt DateTime  @default(now())
 }
 
 // model User {
