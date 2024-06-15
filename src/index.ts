@@ -6,8 +6,7 @@ import { decode, sign, verify } from "hono/jwt";
 import { jwt } from "hono/jwt";
 import type { JwtVariables } from "hono/jwt";
 import { PrismaClient } from "@prisma/client";
-import  PrismaClientKnownRequestError  from '@prisma/client';
-
+import PrismaClientKnownRequestError from "@prisma/client";
 
 const app = new Hono();
 const prisma = new PrismaClient();
@@ -22,7 +21,6 @@ app.use(
     secret: "mySecretKey",
   })
 );
-
 
 // registration route
 app.post("/signup", async (c) => {
@@ -50,9 +48,11 @@ app.post("/signup", async (c) => {
   } catch (error) {
     // Handle errors
     console.error("Error occurred during user registration:", error);
-    
+
     if (error instanceof Error && (error as any).code === "P2002") {
-      console.log("There is a unique constraint violation, a new user cannot be created with this email");
+      console.log(
+        "There is a unique constraint violation, a new user cannot be created with this email"
+      );
       return c.json({ message: "Email already exists" });
     } else {
       // Return generic error response
@@ -60,7 +60,6 @@ app.post("/signup", async (c) => {
     }
   }
 });
-
 
 // login route
 app.post("/login", async (c) => {
@@ -96,6 +95,44 @@ app.post("/login", async (c) => {
   }
 });
 
+
+// this is for latest post to be at top
+app.get("/feeds", async (c) => {
+  const feeds = await prisma.post.findMany({
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+  return c.json(feeds);
+});
+
+// like count
+app.post("feeds/post/:id/like", async (c) => {
+  const { id } = c.req.param();
+  const post = await prisma.post.update({
+    where: { id: String(id) },
+    data: {
+      likes: {
+        increment: 1,
+      },
+    },
+  });
+  return c.json(post);
+});
+
+//  comment
+app.get("feeds/post/:id/comments", async (c) => {
+  const { id } = c.req.param();
+  const comments = await prisma.comment.findMany({
+    where: {
+      postId: String(id),
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+  return c.json(comments);
+});
 // endpoint for profile
 app.get("/profile/:username", async (c) => {
   const { username } = c.req.param();
@@ -127,6 +164,7 @@ app.get("/profile/:username/followers", async (c) => {
   });
   return c.json(followers);
 });
+
 // endpoint for following on profile
 app.get("/profile/:username/following", async (c) => {
   const { username } = c.req.param();
@@ -139,45 +177,6 @@ app.get("/profile/:username/following", async (c) => {
     },
   });
   return c.json(following);
-
-});
-
-// this is for latest post to be at top
-app.get("/feeds", async (c) => {
-  const feeds = await prisma.post.findMany({
-    orderBy: {
-      createdAt: 'desc'
-    }
-  });
-  return c.json(feeds);
-});
-
-// like count 
-app.post("feeds/post/:id/like", async (c) => {
-  const { id } = c.req.param();
-  const post = await prisma.post.update({
-    where: { id: Number(id) },
-    data: {
-      likes: {
-        increment: 1
-      }
-    }
-  });
-  return c.json(post);
-});
-
-//  comment
-app.get("feeds/post/:id/comments", async (c) => {
-  const { id } = c.req.param();
-  const comments = await prisma.comment.findMany({
-    where: {
-      postId: Number(id),
-    },
-    orderBy: {
-      createdAt: 'desc'
-    }
-  });
-  return c.json(comments);
 });
 
 //endpoint for viewing information on profile
@@ -202,9 +201,7 @@ app.patch("profile/:username/editpf", async (c) => {
     where: {
       username,
     },
-    data: {
-      
-    },
+    data: {},
   });
   return c.json(updatedProfile);
 });
