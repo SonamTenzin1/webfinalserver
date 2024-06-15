@@ -139,6 +139,45 @@ app.get("/profile/:username/following", async (c) => {
     },
   });
   return c.json(following);
+
+});
+
+// this is for latest post to be at top
+app.get("/feeds", async (c) => {
+  const feeds = await prisma.post.findMany({
+    orderBy: {
+      createdAt: 'desc'
+    }
+  });
+  return c.json(feeds);
+});
+
+// like count 
+app.post("feeds/post/:id/like", async (c) => {
+  const { id } = c.req.param();
+  const post = await prisma.post.update({
+    where: { id: Number(id) },
+    data: {
+      likes: {
+        increment: 1
+      }
+    }
+  });
+  return c.json(post);
+});
+
+//  comment
+app.get("feeds/post/:id/comments", async (c) => {
+  const { id } = c.req.param();
+  const comments = await prisma.comment.findMany({
+    where: {
+      postId: Number(id),
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  });
+  return c.json(comments);
 });
 
 //endpoint for viewing information on profile
