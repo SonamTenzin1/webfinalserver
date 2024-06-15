@@ -25,7 +25,7 @@ app.use(
 
 
 // registration route
-app.post("/register", async (c) => {
+app.post("/signup", async (c) => {
   try {
     const body = await c.req.json();
 
@@ -97,7 +97,6 @@ app.post("/login", async (c) => {
 });
 
 // endpoint for profile
-
 app.get("/profile/:username", async (c) => {
   const { username } = c.req.param();
   const profile = await prisma.user.findUnique({
@@ -142,13 +141,31 @@ app.get("/profile/:username/following", async (c) => {
   return c.json(following);
 });
 
+//endpoint for viewing information on profile
+app.get("profile/:username/editpf", async (c) => {
+  const { username } = c.req.param();
+  const following = await prisma.user.findUnique({
+    where: {
+      username,
+    },
+    select: {
+      username: true,
+      bio: true,
+    },
+  });
+  return c.json(following);
+});
+
+// endpoint for editing information on profile
 app.patch("profile/:username/editpf", async (c) => {
   const { username } = c.req.param();
   const updatedProfile = await prisma.user.update({
     where: {
       username,
     },
-    data: {},
+    data: {
+      
+    },
   });
   return c.json(updatedProfile);
 });
