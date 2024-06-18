@@ -9,64 +9,46 @@ generator client {
 }
 
 datasource db {
-  provider = "mongodb"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
-
 model User {
-
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  username          String? @unique
+  id             Int      @id @default(autoincrement())
+  username       String?  @unique
   bio            String?
-  followers    User[]   @relation("UserFollows", fields: [followedByIDs], references: [id])
-  followedByIDs String[] @db.ObjectId
-  following     User[]   @relation("UserFollows", fields: [followingIDs], references: [id])
-  followingIDs  String[] @db.ObjectId
-  Post          Post[]
-  name           String?
-  email          String    @unique
+  name       String?
+  followedBy User[]  @relation("UserFollows")
+  following  User[]  @relation("UserFollows")
+  Post           Post[]
+  email          String   @unique
   hashedPassword String
   Account        Account[]
 }
 
 model Post {
-  id       String    @id @default(auto()) @map("_id") @db.ObjectId
-  slug     String    @unique
-  title    String
-  body     String
-  author   User      @relation(fields: [authorId], references: [id])
-  authorId String    @db.ObjectId
-  comments Comment[]
-  likes    Int
+  id        Int       @id @default(autoincrement())
+  slug      String    @unique
+  title     String
+  body      String
+  author    User      @relation(fields: [authorId], references: [id])
+  authorId  Int
+  comments  Comment[]
+  likes     Int
   createdAt DateTime  @default(now())
 }
 
-// model User {
-//   id      String   @id @default(auto()) @map("_id") @db.ObjectId
-//   email   String   @unique
-//   name    String?
-//   address Address?
-//   posts   Post[]
-// }  
-
 model Comment {
-  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  id      Int    @id @default(autoincrement())
   comment String
   post    Post   @relation(fields: [postId], references: [id])
-  postId  String @db.ObjectId
+  postId  Int
+  createdAt DateTime @default(now())
 }
 
-// Address is an embedded document
-type Address {
-  street String
-  city   String
-  state  String
-  zip    String
-}
 
 model Account {
-  id      String @id @default(uuid()) @map("_id")
-  userId  String @db.ObjectId
+  id      Int    @id @default(autoincrement())
+  userId  Int
   user    User   @relation(fields: [userId], references: [id])
   balance Int    @default(0)
 }

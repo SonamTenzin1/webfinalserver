@@ -110,7 +110,7 @@ app.get("/feeds", async (c) => {
 app.post("feeds/post/:id/like", async (c) => {
   const { id } = c.req.param();
   const post = await prisma.post.update({
-    where: { id: String(id) },
+    where: { id: Number(id) },
     data: {
       likes: {
         increment: 1,
@@ -125,7 +125,7 @@ app.get("feeds/post/:id/comments", async (c) => {
   const { id } = c.req.param();
   const comments = await prisma.comment.findMany({
     where: {
-      postId: String(id),
+      postId: Number(id),
     },
     orderBy: {
       createdAt: "desc",
@@ -143,7 +143,7 @@ app.get("/profile/:username", async (c) => {
     select: {
       username: true,
       following: true,
-      followers: true,
+      followedBy: true,
       bio: true,
       Post: true,
     },
@@ -159,7 +159,7 @@ app.get("/profile/:username/followers", async (c) => {
       username,
     },
     select: {
-      followers: true,
+      followedBy: true,
     },
   });
   return c.json(followers);
@@ -201,7 +201,9 @@ app.patch("profile/:username/editpf", async (c) => {
     where: {
       username,
     },
-    data: {},
+    data: {
+      
+    },
   });
   return c.json(updatedProfile);
 });
