@@ -2,66 +2,50 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
-import { decode, sign, verify } from "hono/jwt";
-import { jwt } from "hono/jwt";
-import type { JwtVariables } from "hono/jwt";
+import { hash, compare } from "bcrypt";
+import { sign } from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
-import PrismaClientKnownRequestError from "@prisma/client";
 
 const app = new Hono();
 const prisma = new PrismaClient();
 
-type Variables = JwtVariables;
-
 app.use("/*", cors());
 
-app.use(
-  "/protected/*",
-  jwt({
-    secret: "mySecretKey",
-  })
-);
-
-// registration route
+// Signup route
 app.post("/signup", async (c) => {
   try {
     const body = await c.req.json();
 
     // Validate email and password here if necessary
+    if (!body.email || !body.password || !body.username) {
+      throw new HTTPException(400, { message: "Missing required fields" });
+    }
 
-    const bcryptHash = await Bun.password.hash(body.password, {
-      algorithm: "bcrypt",
-      cost: 4, // number between 4-31
-    });
+    const hashedPassword = await hash(body.password, 10); // Hash password with 10 salt rounds
 
     const user = await prisma.user.create({
       data: {
         email: body.email,
-        hashedPassword: bcryptHash,
+        hashedPassword,
+        username: body.username,
       },
     });
 
-    // Additional logic or response handling if needed
-
-    // Return success response
     return c.json({ message: "User registered successfully" });
   } catch (error) {
-    // Handle errors
     console.error("Error occurred during user registration:", error);
 
-    if (error instanceof Error && (error as any).code === "P2002") {
-      console.log(
-        "There is a unique constraint violation, a new user cannot be created with this email"
-      );
+    if (error instanceof HTTPException) {
+      throw error; // Re-throw HTTPException with status code and message
+    } else if ((error as any).code === "P2002") {
       return c.json({ message: "Email already exists" });
     } else {
-      // Return generic error response
       return c.json({ message: "Internal server error" });
     }
   }
 });
 
-// login route
+// Login route
 app.post("/login", async (c) => {
   try {
     const body = await c.req.json();
@@ -71,102 +55,111 @@ app.post("/login", async (c) => {
     });
 
     if (!user) {
-      return c.json({ message: "User not found" });
+      throw new HTTPException(401, { message: "User not found" });
     }
 
-    const match = await Bun.password.verify(
-      body.password,
-      user.hashedPassword,
-      "bcrypt"
-    );
+    const match = await compare(body.password, user.hashedPassword);
+
     if (match) {
       const payload = {
         sub: user.id,
-        exp: Math.floor(Date.now() / 1000) + 60 * 60, // Token expires in 60 minutes
+        exp: Math.floor(Date.now() / 1000) + 60 * 60, // Token expires in 1 hour
       };
-      const secret = "mySecretKey";
-      const token = await sign(payload, secret);
-      return c.json({ message: "Login successful", token: token });
+
+      const secret = "mySecretKey"; // Replace with your actual secret key
+      const token = sign(payload, secret);
+
+      return c.json({ message: "Login successful", token });
     } else {
       throw new HTTPException(401, { message: "Invalid credentials" });
     }
   } catch (error) {
+    console.error("Error occurred during login:", error);
     throw new HTTPException(401, { message: "Invalid credentials" });
   }
 });
 
-
-// this is for latest post to be at top
+// Get all posts sorted by createdAt descending
 app.get("/feeds", async (c) => {
-  const feeds = await prisma.post.findMany({
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-  return c.json(feeds);
+  try {
+    const feeds = await prisma.post.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+    return c.json(feeds);
+  } catch (error) {
+    console.error("Error fetching feeds:", error);
+    return c.json({ message: "Failed to fetch feeds" });
+  }
 });
 
-// like count
-app.post("feeds/post/:id/like", async (c) => {
+// Like a post
+app.post("/feeds/post/:id/like", async (c) => {
   const { id } = c.req.param();
-  const post = await prisma.post.update({
-    where: { id: Number(id) },
-    data: {
-      likes: {
-        increment: 1,
-      },
-    },
-  });
-  return c.json(post);
+  try {
+    const post = await prisma.post.update({
+      where: { id: Number(id) },
+      data: { likes: { increment: 1 } },
+    });
+    return c.json(post);
+  } catch (error) {
+    console.error(`Error liking post with id ${id}:`, error);
+    return c.json({ message: "Failed to like post" });
+  }
 });
 
-//  comment
-app.get("feeds/post/:id/comments", async (c) => {
+// Get comments for a post
+app.get("/feeds/post/:id/comments", async (c) => {
   const { id } = c.req.param();
-  const comments = await prisma.comment.findMany({
-    where: {
-      postId: Number(id),
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-  return c.json(comments);
+  try {
+    const comments = await prisma.comment.findMany({
+      where: { postId: Number(id) },
+      orderBy: { createdAt: "desc" },
+    });
+    return c.json(comments);
+  } catch (error) {
+    console.error(`Error fetching comments for post with id ${id}:`, error);
+    return c.json({ message: "Failed to fetch comments" });
+  }
 });
-// endpoint for profile
+
+// Get user profile by username
 app.get("/profile/:username", async (c) => {
   const { username } = c.req.param();
-  const profile = await prisma.user.findUnique({
-    where: {
-      username,
-    },
-    select: {
-      username: true,
-      following: true,
-      followedBy: true,
-      bio: true,
-      Post: true,
-    },
-  });
-  return c.json(profile);
+  try {
+    const profile = await prisma.user.findUnique({
+      where: { username },
+      select: {
+        username: true,
+        following: true,
+        followedBy: true,
+        bio: true,
+        Post: true, // Change 'posts' to 'Post'
+      },
+    });
+    return c.json(profile);
+  } catch (error) {
+    console.error(`Error fetching profile for ${username}:`, error);
+    return c.json({ message: "Failed to fetch profile" });
+  }
 });
 
-// endpoint for followers on profile
-app.get("/profile/:username/followers", async (c) => {
+// Get editable profile information by username
+app.get("/profile/:username/editpf", async (c) => {
   const { username } = c.req.param();
-  const followers = await prisma.user.findUnique({
-    where: {
-      username,
-    },
-    select: {
-      followedBy: true,
-    },
-  });
-  return c.json(followers);
+  try {
+    const editableProfile = await prisma.user.findUnique({
+      where: { username },
+      select: { username: true, bio: true },
+    });
+    return c.json(editableProfile);
+  } catch (error) {
+    console.error(`Error fetching editable profile for ${username}:`, error);
+    return c.json({ message: "Failed to fetch editable profile" });
+  }
 });
 
-// endpoint for following on profile
-app.get("/profile/:username/following", async (c) => {
+// Update profile information by username
+app.patch("/profile/:username/editpf", async (c) => {
   const { username } = c.req.param();
   const following = await prisma.user.findUnique({
     where: {
@@ -195,7 +188,6 @@ app.get("profile/:username/editpf", async (c) => {
 });
 
 // endpoint for editing information on profile
-
 app.patch("profile/:username/editpf", async (c) => {
   const { username } = c.req.param();
   const updatedProfile = await prisma.user.update({
@@ -203,16 +195,15 @@ app.patch("profile/:username/editpf", async (c) => {
       username,
     },
     data: {
-      bio: c.req.json().
+      
     },
   });
   return c.json(updatedProfile);
 });
 
 const port = 3000;
-console.log(`Server is running on port ${port}`);
-
 serve({
   fetch: app.fetch,
   port,
 });
+console.log(`Server is running on port ${port}`);
