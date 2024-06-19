@@ -16,9 +16,9 @@ model User {
   id             Int      @id @default(autoincrement())
   username       String?  @unique
   bio            String?
-  name       String?
-  followedBy User[]  @relation("UserFollows")
-  following  User[]  @relation("UserFollows")
+  name           String?
+  followedBy     User[]  @relation("UserFollows")
+  following      User[]  @relation("UserFollows")
   Post           Post[]
   email          String   @unique
   hashedPassword String
@@ -38,10 +38,10 @@ model Post {
 }
 
 model Comment {
-  id      Int    @id @default(autoincrement())
-  comment String
-  post    Post   @relation(fields: [postId], references: [id])
-  postId  Int
+  id        Int    @id @default(autoincrement())
+  comment   String
+  post      Post   @relation(fields: [postId], references: [id])
+  postId    Int
   createdAt DateTime @default(now())
 }
 
