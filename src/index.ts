@@ -190,12 +190,14 @@ app.get("profile/:username/editpf", async (c) => {
 // endpoint for editing information on profile
 app.patch("profile/:username/editpf", async (c) => {
   const { username } = c.req.param();
+  const body = await c.req.json()
   const updatedProfile = await prisma.user.update({
     where: {
       username,
     },
     data: {
-      
+      bio: body.bio,
+      username: body.username,
     },
   });
   return c.json(updatedProfile);
